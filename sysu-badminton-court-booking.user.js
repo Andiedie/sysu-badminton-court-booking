@@ -26,7 +26,25 @@
   `;
   document.body.appendChild(wrapper);
 
+  // 确认目标日期是否开放预定
+  const checkAvailable = async dateString => {
+    const { data } = await axios.get('/product/show.html?id=35');
+    const result = data.match(/<div class="date">(\d+-\d+-\d+)<\/div>/g);
+    return result.includes(`<div class="date">${dateString}</div>`);
+  };
+
+  // 确认登录状态
+  const checkLogin = async () => {
+    const { data } = await axios.get('/product/show.html?id=35');
+    return data.includes('安全退出');
+  };
+
+
   button.onclick = async () => {
+    if (await checkLogin() === false) {
+      alert('请先登录');
+      return;
+    }
     // 确认预订信息
     // dayOffset：预定日距离今天还有多少天
     const dayOffset = prompt('预定哪天的？\n0 for today.\n1 for tomorrow\netc.', 1);
@@ -58,13 +76,6 @@
     });
     // 询问用户是否确认
     if (!confirm(`确定要预定\n${formatedDate}${targetList.reduce((prev, cur, index) => `${prev}\n${cur}`, '')}\n的羽毛球场地吗？`)) return;
-
-    // 确认目标日期是否开放预定
-    const checkAvailable = async dateString => {
-      const { data } = await axios.get('http://gym.sysu.edu.cn/product/show.html?id=35');
-      const result = data.match(/<div class="date">(\d+-\d+-\d+)<\/div>/g);
-      return result.includes(`<div class="date">${dateString}</div>`);
-    };
 
     let isDateAvailable = await checkAvailable(formatedDate);
     if (!isDateAvailable) {
