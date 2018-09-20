@@ -4,7 +4,7 @@
 // @author       Andiedie
 // @license      MIT License
 // @homepageURL  https://github.com/Andiedie/sysu-badminton-court-booking
-// @match        http://gym.sysu.edu.cn/*
+// @match        http://gym.sysu.edu.cn/product/show.html?id=35*
 // @description  中大东校羽毛球场地极简预定
 // @version      0.1
 // @grant        none
@@ -14,16 +14,16 @@
 
 (async function () {
   'use strict';
+
+  const button = document.createElement('a');
+  button.textContent = '自动预定';
+  document.querySelector('div.switch.simple-lines div.boxes').appendChild(button);
   const wrapper = document.createElement('div');
   wrapper.style = `
     position: fixed;
     top: 0;
     left: 0;
   `;
-
-  const button = document.createElement('button');
-  button.textContent = '预定羽毛球场馆';
-  wrapper.appendChild(button);
   document.body.appendChild(wrapper);
 
   button.onclick = async () => {
@@ -113,7 +113,7 @@
         if (data.message = '未支付') {
           const [done] = requireList.splice(target.requireListIndex, 1);
           const orderId = data.object.orderid;
-          const link = wrapper.children[target.requireListIndex + 1];
+          const link = wrapper.children[target.requireListIndex];
           link.href = `/order/myorder_view.html?id=${orderId}`;
           link.textContent = `${done} √ 点击付款`;
         }
