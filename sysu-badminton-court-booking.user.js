@@ -47,17 +47,17 @@
     });
     const timeTable = data.timeList.map(obj => obj.TIME_NO);
 
-    // requiredIndex：预定时间的index
-    const requiredIndex = prompt(`预定几点的？${timeTable.reduce((prev, cur, index) => `${prev}\n${index} for ${cur}`, '')}\n多个时间段逗号隔开`, '0,1,2,3');
-    if (requiredIndex === null) return;
+    // targetIndecies：预定时间的index
+    const targetIndecies = prompt(`预定几点的？${timeTable.reduce((prev, cur, index) => `${prev}\n${index} for ${cur}`, '')}\n多个时间段逗号隔开`, '0,1,2,3');
+    if (targetIndecies === null) return;
 
-    // requireList：预定时间列表
-    const requireList = [];
-    requiredIndex.split(',').forEach(index => {
-      requireList.push(timeTable[index]);
+    // targetList：预定时间列表
+    const targetList = [];
+    targetIndecies.split(',').forEach(index => {
+      targetList.push(timeTable[index]);
     });
     // 询问用户是否确认
-    if (!confirm(`确定要预定\n${formatedDate}${requireList.reduce((prev, cur, index) => `${prev}\n${cur}`, '')}\n的羽毛球场地吗？`)) return;
+    if (!confirm(`确定要预定\n${formatedDate}${targetList.reduce((prev, cur, index) => `${prev}\n${cur}`, '')}\n的羽毛球场地吗？`)) return;
 
     // 确认目标日期是否开放预定
     const checkAvailable = async dateString => {
@@ -69,10 +69,10 @@
     let isDateAvailable = await checkAvailable(formatedDate);
     if (!isDateAvailable) {
       alert(`你选择的日期 ${formatedDate} 还未开始预定\n脚本将在开始时自动运行`);
-    }    
+    }
 
     // UI
-    for (const one of requireList) {
+    for (const one of targetList) {
       const link = document.createElement('a');
       link.style = `
         display: block;
@@ -85,16 +85,20 @@
       wrapper.appendChild(link);
     }
 
-    // 开始轮询
-    while (requireList.length) {
+    // 等待开始
+    while (!isDateAvailable) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       isDateAvailable = await checkAvailable(formatedDate);
-      for (const one of wrapper.children) {
-        one.textContent = `${one.targetTime} ${isDateAvailable ? '正在预定' : '等待开始'}`;
-      }
-      if (!isDateAvailable) continue;
-      // 可预订的场
-      const availableList = [];
+    }
+
+    for (const one of wrapper.children) {
+      one.textContent = `${one.targetTime} 正在预定`;
+    }
+
+    // 开始轮询
+    while (targetList.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // 获取预定日的所有可用场地
       const { data } = await axios.get('/product/findOkArea.html', {
         params: {
@@ -102,25 +106,23 @@
           serviceid: '35'
         }
       });
-      if (!data.object) data.object = [];
-      // 对于所有可用场地
-      for (const one of data.object) {
-        // 如果这个场地在预定列表里
-        const requireListIndex = requireList.indexOf(one.stock.time_no);
-        if (requireListIndex != -1) {
-          one.requireListIndex = requireListIndex;
-          if (Number(one.name) % 5 > 1) {
-            // 将位置在中间的球场放在优先位置
-            availableList.unshift(one);
-          } else {
-            // 将边缘的球场放在队列后面
-            availableList.push(one);
-          }
-        }
+      if (!data.object) continue;
+
+      // 符合条件且可以提交申请的场地列表
+      const taskList = [];
+      // 对于每个需求
+      for (const targetTime of targetList) {
+        // 筛选出符合时间要求的场地
+        const satisfied = data.object.filter(val => val.stock.time_no === targetTime);
+        if (satisfied.length === 0) continue;
+        // 选出第一个位置在中间的球场
+        // 没有的话就随便选一个
+        const target = satisfied.find(val => Number(val.name) % 5 > 1) || satisfied[0];
+        taskList.push(target);
       }
+
       // 如果有可以预定的场
-      if (availableList.length) {
-        const target = availableList[0];
+      for (const target of taskList) {
         const formData = new FormData();
         formData.append('param', `{"activityPrice":0,"activityStr":null,"address":null,"dates":null,"extend":null,"flag":"0","isbookall":"0","isfreeman":"0","istimes":"1","merccode":null,"order":null,"orderfrom":null,"remark":null,"serviceid":null,"shoppingcart":"0","sno":null,"stock":{"${target.stockid}":"1"},"stockdetail":{"${target.stockid}":"${target.id}"},"stockdetailids":"${target.id}","subscriber":"0","time_detailnames":null,"userBean":null}`);
         formData.append('json', 'true');
@@ -131,14 +133,17 @@
         });
 
         if (data.message === '未支付') {
-          const [done] = requireList.splice(target.requireListIndex, 1);
+          const doneTime = target.stock.time_no;
+          targetList.splice(targetList.findIndex(val => val === doneTime), 1);
           const orderId = data.object.orderid;
-          const link = wrapper.children[target.requireListIndex];
+          const link = [...wrapper.children].find(val => val.targetTime === doneTime);
           link.href = `/order/myorder_view.html?id=${orderId}`;
-          link.textContent = `${done} √ 点击付款`;
+          link.textContent = `${doneTime} √ 点击付款`;
+          link.targetTime = 'done';
         }
       }
     }
     alert('全部预定已经完成');
+    while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
   };
 })();
