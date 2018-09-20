@@ -59,6 +59,18 @@
     // 询问用户是否确认
     if (!confirm(`确定要预定\n${formatedDate}${requireList.reduce((prev, cur, index) => `${prev}\n${cur}`, '')}\n的羽毛球场地吗？`)) return;
 
+    // 确认目标日期是否开放预定
+    const checkAvailable = async dateString => {
+      const { data } = await axios.get('http://gym.sysu.edu.cn/product/show.html?id=35');
+      const result = data.match(/<div class="date">(\d+-\d+-\d+)<\/div>/g);
+      return result.includes(`<div class="date">${dateString}</div>`);
+    };
+
+    let isDateAvailable = await checkAvailable(formatedDate);
+    if (!isDateAvailable) {
+      alert(`你选择的日期 ${formatedDate} 还未开始预定\n脚本将在开始时自动运行`);
+    }    
+
     // UI
     for (const one of requireList) {
       const link = document.createElement('a');
@@ -68,12 +80,19 @@
       `;
       link.target = '_blank';
       link.href = '#';
-      link.textContent = `${one} 正在预定`;
+      link.targetTime = one;
+      link.textContent = `${one} ${isDateAvailable ? '正在预定' : '等待开始'}`;
       wrapper.appendChild(link);
     }
 
     // 开始轮询
     while (requireList.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      isDateAvailable = await checkAvailable(formatedDate);
+      for (const one of wrapper.children) {
+        one.textContent = `${one.targetTime} ${isDateAvailable ? '正在预定' : '等待开始'}`;
+      }
+      if (!isDateAvailable) continue;
       // 可预订的场
       const availableList = [];
       // 获取预定日的所有可用场地
@@ -110,7 +129,8 @@
             'Content-Type': 'multipart/form-data'
           }
         });
-        if (data.message = '未支付') {
+
+        if (data.message === '未支付') {
           const [done] = requireList.splice(target.requireListIndex, 1);
           const orderId = data.object.orderid;
           const link = wrapper.children[target.requireListIndex];
@@ -118,7 +138,6 @@
           link.textContent = `${done} √ 点击付款`;
         }
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     alert('全部预定已经完成');
   };
