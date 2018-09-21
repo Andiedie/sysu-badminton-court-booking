@@ -40,6 +40,7 @@
   };
 
   button.onclick = async () => {
+    while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
     if (await checkLogin() === false) {
       alert('请先登录');
       return;
@@ -157,6 +158,5 @@
       }
     }
     alert('全部预定已经完成');
-    while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
   };
 })();
