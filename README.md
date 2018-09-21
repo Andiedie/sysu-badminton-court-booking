@@ -22,7 +22,7 @@
 打开 [东校园羽毛球场](http://gym.sysu.edu.cn/product/show.html?id=35)，点击`自动预定`即可。
 
 ## 兼容性
-只测试了 Tampermonkey 的兼容性
+只测试了 最新版 Chrome 浏览器下对 Tampermonkey 的兼容性
 
 ## LICENSE
 MIT
