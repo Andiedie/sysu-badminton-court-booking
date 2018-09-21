@@ -129,6 +129,8 @@
         // 选出第一个位置在中间的球场
         // 没有的话就随便选一个
         const court = satisfied.find(val => Number(val.name) % 5 > 1) || satisfied[0];
+        // 避免同一个场地被多个任务选中
+        court.stock.time_no = '';
         taskList.push({
           id: court.id,
           stockid: court.stockid,
