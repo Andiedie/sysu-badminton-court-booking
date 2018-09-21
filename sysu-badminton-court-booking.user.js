@@ -6,7 +6,7 @@
 // @homepageURL  https://github.com/Andiedie/sysu-badminton-court-booking
 // @match        http://gym.sysu.edu.cn/product/show.html?id=35*
 // @description  中大东校羽毛球场地极简预定
-// @version      0.2
+// @version      0.2.0
 // @grant        none
 // @require      https://cdn.bootcss.com/axios/0.18.0/axios.min.js
 // @require      https://cdn.bootcss.com/date-fns/123/date_fns.min.js
@@ -39,7 +39,6 @@
     return data.includes('安全退出');
   };
 
-
   button.onclick = async () => {
     if (await checkLogin() === false) {
       alert('请先登录');
@@ -63,27 +62,28 @@
         type: 'day'
       }
     });
-    const timeTable = data.timeList.map(obj => obj.TIME_NO);
+    const availableTime = data.timeList.map(obj => obj.TIME_NO);
 
     // targetIndecies：预定时间的index
-    const targetIndecies = prompt(`预定几点的？${timeTable.reduce((prev, cur, index) => `${prev}\n${index} for ${cur}`, '')}\n多个时间段逗号隔开`, '0,1,2,3');
+    const targetIndecies = prompt(`预定几点的？${availableTime.reduce((prev, cur, index) => `${prev}\n${index} for ${cur}`, '')}\n多个时间段逗号隔开`, '0,1,2,3');
     if (targetIndecies === null) return;
 
     // targetList：预定时间列表
     const targetList = [];
-    targetIndecies.split(',').forEach(index => {
-      targetList.push(timeTable[index]);
-    });
+    targetIndecies.split(',').forEach(index => targetList.push({
+      time: availableTime[index],
+      done: false,
+      ele: null
+    }));
+
     // 询问用户是否确认
-    if (!confirm(`确定要预定\n${formatedDate}${targetList.reduce((prev, cur, index) => `${prev}\n${cur}`, '')}\n的羽毛球场地吗？`)) return;
+    if (!confirm(`确定要预定\n${formatedDate}${targetList.reduce((prev, cur) => `${prev}\n${cur.time}`, '')}\n的羽毛球场地吗？`)) return;
 
     let isDateAvailable = await checkAvailable(formatedDate);
-    if (!isDateAvailable) {
-      alert(`你选择的日期 ${formatedDate} 还未开始预定\n脚本将在开始时自动运行`);
-    }
+    if (!isDateAvailable) alert(`你选择的日期 ${formatedDate} 还未开始预定\n脚本将在开始时自动运行`);
 
     // UI
-    for (const one of targetList) {
+    for (const target of targetList) {
       const link = document.createElement('a');
       link.style = `
         display: block;
@@ -91,9 +91,9 @@
       `;
       link.target = '_blank';
       link.href = '#';
-      link.targetTime = one;
-      link.textContent = `${one} ${isDateAvailable ? '正在预定' : '等待开始'}`;
+      link.textContent = `${target.time} ${isDateAvailable ? '正在预定' : '等待开始'}`;
       wrapper.appendChild(link);
+      target.ele = link;
     }
 
     // 等待开始
@@ -102,12 +102,12 @@
       isDateAvailable = await checkAvailable(formatedDate);
     }
 
-    for (const one of wrapper.children) {
-      one.textContent = `${one.targetTime} 正在预定`;
+    for (const target of targetList) {
+      target.ele.textContent = `${target.time} 正在预定`;
     }
 
     // 开始轮询
-    while (targetList.length) {
+    while (targetList.find(val => !val.done)) {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 获取预定日的所有可用场地
@@ -121,21 +121,25 @@
 
       // 符合条件且可以提交申请的场地列表
       const taskList = [];
-      // 对于每个需求
-      for (const targetTime of targetList) {
+      // 对于每个未完成的需求
+      for (const target of targetList.filter(val => !val.done)) {
         // 筛选出符合时间要求的场地
-        const satisfied = data.object.filter(val => val.stock.time_no === targetTime);
+        const satisfied = data.object.filter(val => val.stock.time_no === target.time);
         if (satisfied.length === 0) continue;
         // 选出第一个位置在中间的球场
         // 没有的话就随便选一个
-        const target = satisfied.find(val => Number(val.name) % 5 > 1) || satisfied[0];
-        taskList.push(target);
+        const court = satisfied.find(val => Number(val.name) % 5 > 1) || satisfied[0];
+        taskList.push({
+          id: court.id,
+          stockid: court.stockid,
+          target
+        });
       }
 
       // 如果有可以预定的场
-      for (const target of taskList) {
+      for (const task of taskList) {
         const formData = new FormData();
-        formData.append('param', `{"activityPrice":0,"activityStr":null,"address":null,"dates":null,"extend":null,"flag":"0","isbookall":"0","isfreeman":"0","istimes":"1","merccode":null,"order":null,"orderfrom":null,"remark":null,"serviceid":null,"shoppingcart":"0","sno":null,"stock":{"${target.stockid}":"1"},"stockdetail":{"${target.stockid}":"${target.id}"},"stockdetailids":"${target.id}","subscriber":"0","time_detailnames":null,"userBean":null}`);
+        formData.append('param', `{"activityPrice":0,"activityStr":null,"address":null,"dates":null,"extend":null,"flag":"0","isbookall":"0","isfreeman":"0","istimes":"1","merccode":null,"order":null,"orderfrom":null,"remark":null,"serviceid":null,"shoppingcart":"0","sno":null,"stock":{"${task.stockid}":"1"},"stockdetail":{"${task.stockid}":"${task.id}"},"stockdetailids":"${task.id}","subscriber":"0","time_detailnames":null,"userBean":null}`);
         formData.append('json', 'true');
         const { data } = await axios.post('/order/book.html', formData, {
           headers: {
@@ -144,13 +148,9 @@
         });
 
         if (data.message === '未支付') {
-          const doneTime = target.stock.time_no;
-          targetList.splice(targetList.findIndex(val => val === doneTime), 1);
-          const orderId = data.object.orderid;
-          const link = [...wrapper.children].find(val => val.targetTime === doneTime);
-          link.href = `/order/myorder_view.html?id=${orderId}`;
-          link.textContent = `${doneTime} √ 点击付款`;
-          link.targetTime = 'done';
+          task.target.done = true;
+          task.target.ele.href = `/order/myorder_view.html?id=${data.object.orderid}`;
+          task.target.ele.textContent = `${task.target.time} √ 点击付款`;
         }
       }
     }
