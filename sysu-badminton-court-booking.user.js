@@ -135,6 +135,7 @@
         taskList.push({
           id: court.id,
           stockid: court.stockid,
+          name: court.name,
           target
         });
       }
@@ -153,7 +154,7 @@
         if (data.message === '未支付') {
           task.target.done = true;
           task.target.ele.href = `/order/myorder_view.html?id=${data.object.orderid}`;
-          task.target.ele.textContent = `${task.target.time} √ 点击付款`;
+          task.target.ele.textContent = `${task.target.time} ${task.name}号场 √ 点击付款`;
         }
       }
     }
