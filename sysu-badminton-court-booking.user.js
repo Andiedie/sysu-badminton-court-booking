@@ -6,7 +6,7 @@
 // @homepageURL  https://github.com/Andiedie/sysu-badminton-court-booking
 // @match        http://gym.sysu.edu.cn/product/show.html?id=35*
 // @description  中大东校羽毛球场地极简预定
-// @version      0.3.0
+// @version      0.3.1
 // @grant        none
 // @require      https://cdn.bootcss.com/axios/0.18.0/axios.min.js
 // @require      https://cdn.bootcss.com/date-fns/123/date_fns.min.js
