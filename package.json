@@ -1,6 +1,6 @@
 {
   "name": "sysu-badminton-court-booking",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "中大东校羽毛球场地极简预定",
   "main": "sysu-badminton-court-booking.user.js",
   "scripts": {
