@@ -100,7 +100,11 @@
     // 等待开始
     while (!isDateAvailable) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      isDateAvailable = await checkAvailable(formatedDate);
+      try {
+        isDateAvailable = await checkAvailable(formatedDate);
+      } catch (err) {
+        console.log(err.message);
+      }
     }
 
     for (const target of targetList) {
@@ -112,12 +116,17 @@
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 获取预定日的所有可用场地
-      const { data } = await axios.get('/product/findOkArea.html', {
-        params: {
-          s_date: formatedDate,
-          serviceid: '35'
-        }
-      });
+      let data;
+      try {
+        ({ data } = await axios.get('/product/findOkArea.html', {
+          params: {
+            s_date: formatedDate,
+            serviceid: '35'
+          }
+        }));
+      } catch (err) {
+        console.log(err.message);
+      }
       if (!data.object) continue;
 
       // 符合条件且可以提交申请的场地列表
