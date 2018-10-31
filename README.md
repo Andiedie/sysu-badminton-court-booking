@@ -6,13 +6,6 @@
 - 可自定义时间段
 - 若设定了多个时间段，则每个时间段都会预定一个场地
 
-## Todo
-- [X] 登录状态检测
-- [x] 针对提前预定不能预订的日期，则自动检测在开始时运行
-- [x] 在一次查询后，预定所有可能场地
-- [ ] 连续时间段尽量预定相同场地
-- [ ] 更美观的 UI
-
 ## 安装
 首先需要安装 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
 
